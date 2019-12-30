@@ -1,10 +1,15 @@
-# Mass-SMS-Texter
+# Mass-SMS-Texter [WIP]
 Pulls Names and Numbers from a .xlsx file and sends them a personalized message using a connected GSM modem
 
 Built for family business that wants to send text messages to all former customers without paying a third party. 
-Built in Python.
+Built in Python. 
+Supports Windows/Linux/MacOS
 
-WIP
+MUST SPECIFY GSM MODEM SERIAL PORT
+MUST SPECIFY BAUDRATE
+MUST SPECIFY PIN (IF ANY)
+
+
 
 Plans include:
 
