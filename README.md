@@ -14,4 +14,5 @@ GUI
   - Remove customer from list given specific keyword response
 
 Support for multiple GSM Modems for faster distribution
+
 Autodetection of serial ports and compatible modems
