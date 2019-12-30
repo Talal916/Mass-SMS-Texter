@@ -6,7 +6,9 @@ Built in Python.
 Supports Windows/Linux/MacOS
 
 MUST SPECIFY GSM MODEM SERIAL PORT
+
 MUST SPECIFY BAUDRATE
+
 MUST SPECIFY PIN (IF ANY)
 
 
