@@ -1,15 +1,23 @@
 import tkinter as tk
 from tkinter.filedialog import askopenfile, askopenfilename
+from gsmmodem.modem import GsmModem
 import pandas as pd
+
+import smsCommands
+import config
+import testingNumbers
+
 
 window = tk.Tk()
 window.title("SMS Blaster")
 window.geometry('800x800')
+
 fileLoaded = 0
 
 
 def main():
     print("Constructing GUI")
+    initializeModem()
     constructGui()
 
 
@@ -34,12 +42,16 @@ def createButtons():
         window, text="Select customer file", command=fileButtonClicked)
     btn.grid(column=1, row=0)
 
+def initializeModem():
+    print('Initializing modem...')
+    #modem = GsmModem(config.PORT, config.BAUDRATE, smsReceivedCallbackFunc=smsCommands.handleSms)
+    #modem.connect(config.PIN)
+    #print("Modem IMEI: ", modem.imei)
 
 def constructGui():
     createLabel()
     createButtons()
     window.mainloop()
-
 
 if __name__ == '__main__':
     main()

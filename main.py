@@ -26,6 +26,7 @@ def openCustomerSheet():
 
 
 def main():
+    print("Initializing GUI")
     gui.main()
     print('Initializing modem...')
     modem = GsmModem(PORT, BAUDRATE, smsReceivedCallbackFunc=handleSms)
