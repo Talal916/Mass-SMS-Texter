@@ -3,7 +3,6 @@ from __future__ import print_function
 from gsmmodem.modem import GsmModem
 import logging
 import pandas as pd
-import gui
 
 def handleSms(sms):
     print(u'== SMS message received ==\nFrom: {0}\nTime: {1}\nMessage:\n{2}\n'.format(
@@ -15,3 +14,6 @@ def handleSms(sms):
 
 def sendSms(destinationNumber, message):
     print("Sending SMS")
+
+def testSms(testNum):
+    print("Sending test SMS")
