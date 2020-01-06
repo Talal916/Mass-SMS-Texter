@@ -5,13 +5,7 @@ import logging
 import pandas as pd
 import gui
 
-
-PORT = 'COM5'
-BAUDRATE = 9600
-PIN = None  # SIM card PIN (if any)
-UMERBHAINUM = "+923333130814"
-TALALNUM = "+9232111811642"
-
+import config
 
 def handleSms(sms):
     print(u'== SMS message received ==\nFrom: {0}\nTime: {1}\nMessage:\n{2}\n'.format(
@@ -29,11 +23,11 @@ def main():
     print("Initializing GUI")
     gui.main()
     print('Initializing modem...')
-    modem = GsmModem(PORT, BAUDRATE, smsReceivedCallbackFunc=handleSms)
+    modem = GsmModem(config.PORT, config.BAUDRATE, smsReceivedCallbackFunc=handleSms)
     logging.basicConfig(format='%(levelname)s: %(message)s',
                         level=logging.DEBUG)
     modem.smsTextMode = False
-    modem.connect(PIN)
+    modem.connect(config.PIN)
     print("Modem IMEI: ", modem.imei)
     print("Sending SMS: Welcome to Khao Dosa")
    # modem.sendSms(TALALNUM, "Welcome to Khao Dosa!")
