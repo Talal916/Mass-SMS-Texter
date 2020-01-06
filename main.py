@@ -3,6 +3,8 @@ from __future__ import print_function
 from gsmmodem.modem import GsmModem
 import logging
 import pandas as pd
+import gui
+
 
 PORT = 'COM5'
 BAUDRATE = 9600
@@ -24,6 +26,7 @@ def openCustomerSheet():
 
 
 def main():
+    gui.main()
     print('Initializing modem...')
     modem = GsmModem(PORT, BAUDRATE, smsReceivedCallbackFunc=handleSms)
     logging.basicConfig(format='%(levelname)s: %(message)s',
