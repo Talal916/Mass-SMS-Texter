@@ -13,8 +13,13 @@ def handleSms(sms):
     print('SMS sent.\n')
 
 
-def sendSms(destinationNumber, message):
+def sendSms(modem, destinationNumber, message):
     print("Sending SMS")
+    try:
+        modem.sendSms(destinationNumber, message)
+    except:
+        print("Exception raised while sending message to: ", destinationNumber)
+        return
 
 def testSms(modem):
     print("Sending test SMS")
