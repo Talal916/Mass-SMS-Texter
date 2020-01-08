@@ -5,6 +5,7 @@ from tkinter.filedialog import askopenfile, askopenfilename
 from gsmmodem.modem import GsmModem
 from progressbar import ProgressBar
 import pandas as pd
+import serial.tools.list_ports
 from tqdm import *
 
 import smsCommands
@@ -20,8 +21,21 @@ fileLoaded = 0
 
 
 def main():
+    serialPortsList = detectSerialPorts()
     initializeModem()
-    constructGui()
+    constructGui(serialPortsList)
+
+
+def detectSerialPorts():
+    serialPortsList = (list(serial.tools.list_ports.comports()))
+    if(len(serialPortsList) >= 1):
+        print("Serial Port detected. Confirm if Modem")
+        print(serialPortsList)
+        return serialPortsList
+    else:
+        print("\nNo Modem detected! Program exiting!\n")
+        messagebox.showerror("No Modem!","No Modem detected! Program exiting. Check if modem is connected and showing in device manager!")
+        exit()
 
 
 def createLabel():
@@ -49,7 +63,10 @@ def initializeModem():
     modem.connect(config.PIN)
     print("Modem IMEI: ", modem.imei)
     if(messagebox.askyesno("Send test message?", "Would you like to send a test sms message?")):
-        smsCommands.testSms(modem)
+        try:
+            smsCommands.testSms(modem)
+        except:
+            print("Failed to send test message. Check modem")
 
 
 def constructGui():
