@@ -5,6 +5,7 @@ import pandas as pd
 
 import testingNumbers
 
+
 def handleSms(sms):
     print(u'== SMS message received ==\nFrom: {0}\nTime: {1}\nMessage:\n{2}\n'.format(
         sms.number, sms.time, sms.text))
@@ -20,8 +21,10 @@ def sendSms(modem, destinationNumber, message):
     except:
         print("Exception raised while sending message to: ", destinationNumber)
         return
+    print("Message sent")
+
 
 def testSms(modem):
     print("Sending test SMS")
-    TESTSMS = "Test SMS sent from SMS Blaster. Contact @Talal916 for help"    
+    TESTSMS = "Test SMS sent from SMS Blaster. Contact @Talal916 for help"
     modem.sendSms(testingNumbers.TESTNUM1, TESTSMS)

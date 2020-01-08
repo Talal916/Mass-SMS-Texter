@@ -3,7 +3,9 @@ from tkinter import messagebox
 import tkinter.ttk as ttk
 from tkinter.filedialog import askopenfile, askopenfilename
 from gsmmodem.modem import GsmModem
+from progressbar import ProgressBar
 import pandas as pd
+from tqdm import *
 
 import smsCommands
 import config
@@ -46,7 +48,7 @@ def initializeModem():
                      smsReceivedCallbackFunc=smsCommands.handleSms)
     modem.connect(config.PIN)
     print("Modem IMEI: ", modem.imei)
-    if(messagebox.askyesno("Send test message?","Would you like to send a test sms message?")):
+    if(messagebox.askyesno("Send test message?", "Would you like to send a test sms message?")):
         smsCommands.testSms(modem)
 
 
@@ -82,11 +84,14 @@ def sendMessageButtonClicked():
 
 
 def callMessageSender(messageText):
-    for index, row in customerFileData.iterrows():
-        convertedNumber = "+92"+str(row['Mobile'])
-        personalizedMessage = messageText.replace("NAME", row['Name'])
-        print("Sending message: \n"+personalizedMessage+"\n to: "+convertedNumber)
-        smsCommands.sendSms(modem, convertedNumber, personalizedMessage)
+    with tqdm(total=len(list(customerFileData.iterrows()))) as pbar:
+        for index, row in customerFileData.iterrows():
+            convertedNumber = "+92"+str(row['Mobile'])
+            personalizedMessage = messageText.replace("NAME", row['Name'])
+            print("Sending message: \n"+personalizedMessage +
+                  "\n to: "+convertedNumber)
+            smsCommands.sendSms(modem, convertedNumber, personalizedMessage)
+            pbar.update(1)
 
 
 def askConfirmation():
