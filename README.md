@@ -14,9 +14,6 @@ MUST SPECIFY PIN (IF ANY)
 
 
 Plans include:
-
-GUI 
-  - user customizable messages
   - specify how many users to send to 
   - Remove customer from list given specific keyword response
 
