@@ -6,6 +6,7 @@ and sending personalised SMS messages via a connected GSM modem.
 
 import logging
 import tkinter as tk
+import tkinter.simpledialog
 from tkinter import messagebox
 from tkinter.filedialog import askopenfilename
 

@@ -66,7 +66,7 @@ class TestConfig:
     def test_default_values(self):
         import config
 
-        assert config.PORT == "COM5" or isinstance(config.PORT, str)
+        assert isinstance(config.PORT, str)
         assert isinstance(config.BAUDRATE, int)
 
     @patch.dict("os.environ", {"SMS_PORT": "/dev/ttyUSB0", "SMS_BAUDRATE": "9600"})
