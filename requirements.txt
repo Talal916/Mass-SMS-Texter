@@ -1,0 +1,5 @@
+python-gsmmodem>=0.9
+pandas>=1.0
+openpyxl>=3.0
+pyserial>=3.0
+tqdm>=4.0

@@ -1,148 +1,220 @@
+"""Mass SMS Texter – GUI application.
+
+Provides a Tkinter interface for loading customer data from an Excel file
+and sending personalised SMS messages via a connected GSM modem.
+"""
+
+import logging
 import tkinter as tk
-from tkinter import *
 from tkinter import messagebox
-import tkinter.ttk as ttk
-from tkinter.filedialog import askopenfile, askopenfilename
-from gsmmodem.modem import GsmModem
-from progressbar import ProgressBar
+from tkinter.filedialog import askopenfilename
+
 import pandas as pd
 import serial.tools.list_ports
-import logging
-from tqdm import *
-from multiprocessing import Process
+from gsmmodem.modem import GsmModem
+from tqdm import tqdm
 
-import smsCommands
 import config
-import testingNumbers
+import sms_commands
+
+logger = logging.getLogger(__name__)
 
 
-window = tk.Tk()
-window.title("Khao Dosa Messaging Application")
-window.geometry('800x800')
+class Application:
+    """Main application window for Mass SMS Texter."""
 
-fileLoaded = 0
+    def __init__(self):
+        self.window = tk.Tk()
+        self.window.title("Mass SMS Texter")
+        self.window.geometry("800x600")
+
+        self.modem = None
+        self.customer_data = None
+
+        self._detect_serial_ports()
+        self._initialize_modem()
+        self._build_gui()
+
+    # ------------------------------------------------------------------ #
+    #  Modem helpers
+    # ------------------------------------------------------------------ #
+
+    def _detect_serial_ports(self):
+        """Detect serial ports and alert the user if none are found."""
+        ports = list(serial.tools.list_ports.comports())
+        if ports:
+            logger.info("Serial port(s) detected: %s", ports)
+        else:
+            logger.warning("No serial ports detected")
+            messagebox.showerror(
+                "No Modem",
+                "No modem detected! Check that the modem is connected "
+                "and visible in Device Manager.",
+            )
+            raise SystemExit("No modem detected")
+
+    def _initialize_modem(self):
+        """Connect to the GSM modem using settings from *config*."""
+        logger.info("Initialising modem on %s …", config.PORT)
+        self.modem = GsmModem(
+            config.PORT,
+            config.BAUDRATE,
+            smsReceivedCallbackFunc=sms_commands.handle_sms,
+        )
+        self.modem.connect(config.PIN)
+        logger.info("Modem connected – IMEI: %s", self.modem.imei)
+        self._offer_test_message()
+
+    def _reinitialize_modem(self):
+        """Attempt to reconnect to the modem after a failure."""
+        try:
+            logger.info("Reinitialising modem …")
+            self.modem = GsmModem(
+                config.PORT,
+                config.BAUDRATE,
+                smsReceivedCallbackFunc=sms_commands.handle_sms,
+            )
+            self.modem.connect(config.PIN)
+            logger.info("Modem reinitialised – IMEI: %s", self.modem.imei)
+        except Exception as exc:
+            logger.error("Failed to reinitialise modem: %s", exc)
+
+    def _offer_test_message(self):
+        """Prompt the user to send a test SMS after modem initialisation."""
+        if messagebox.askyesno(
+            "Test Message",
+            "Modem connected. Would you like to send a test SMS?",
+        ):
+            number = tk.simpledialog.askstring(
+                "Test Number", "Enter the phone number for the test SMS:"
+            )
+            if number:
+                try:
+                    sms_commands.send_test_sms(self.modem, number)
+                    messagebox.showinfo("Success", "Test SMS sent!")
+                except Exception as exc:
+                    logger.error("Test SMS failed: %s", exc)
+                    messagebox.showerror(
+                        "Error", f"Failed to send test SMS:\n{exc}"
+                    )
+
+    # ------------------------------------------------------------------ #
+    #  GUI construction
+    # ------------------------------------------------------------------ #
+
+    def _build_gui(self):
+        """Lay out all widgets."""
+        # Header
+        header = tk.Label(
+            self.window, text="Mass SMS Texter", font=("Arial", 16, "bold")
+        )
+        header.grid(column=0, row=0, columnspan=2, pady=(10, 5))
+
+        # Buttons
+        file_btn = tk.Button(
+            self.window,
+            text="Load Customer File",
+            width=20,
+            command=self._load_customer_file,
+        )
+        file_btn.grid(column=0, row=1, padx=10, pady=5)
+
+        self.file_label = tk.Label(self.window, text="No file loaded")
+        self.file_label.grid(column=1, row=1, sticky="w")
+
+        send_btn = tk.Button(
+            self.window,
+            text="Send Messages",
+            width=20,
+            command=self._on_send,
+        )
+        send_btn.grid(column=0, row=2, padx=10, pady=5)
+
+        # Message area
+        msg_label = tk.Label(self.window, text="Message (use NAME as placeholder):")
+        msg_label.grid(column=0, row=3, columnspan=2, sticky="w", padx=10, pady=(10, 0))
+
+        self.message_text = tk.Text(self.window, width=80, height=20)
+        self.message_text.grid(column=0, row=4, columnspan=2, padx=10, pady=5)
+
+    # ------------------------------------------------------------------ #
+    #  Actions
+    # ------------------------------------------------------------------ #
+
+    def _load_customer_file(self):
+        """Open a file dialog and load the customer Excel file."""
+        filepath = askopenfilename(
+            filetypes=[("Excel files", "*.xlsx *.xls"), ("All files", "*.*")]
+        )
+        if not filepath:
+            return
+        try:
+            self.customer_data = pd.read_excel(
+                filepath, sheet_name="Sheet1", usecols=["Name", "Mobile"]
+            )
+            count = len(self.customer_data)
+            self.file_label.config(text=f"{count} customers loaded from {filepath}")
+            logger.info("Loaded %d customers from %s", count, filepath)
+        except Exception as exc:
+            logger.error("Failed to load customer file: %s", exc)
+            messagebox.showerror("Error", f"Failed to load file:\n{exc}")
+
+    def _on_send(self):
+        """Validate inputs and send messages after user confirmation."""
+        if self.customer_data is None or self.customer_data.empty:
+            messagebox.showwarning("No Customers", "Please load a customer file first.")
+            return
+
+        message_body = self.message_text.get("1.0", tk.END).strip()
+        if not message_body:
+            messagebox.showwarning("No Message", "Please enter a message to send.")
+            return
+
+        count = len(self.customer_data)
+        if not messagebox.askyesno(
+            "Confirm",
+            f"Send this message to {count} customer(s)?",
+        ):
+            return
+
+        self._send_messages(message_body)
+
+    def _send_messages(self, message_body):
+        """Iterate over customers and send personalised SMS messages."""
+        with tqdm(total=len(self.customer_data), desc="Sending") as pbar:
+            for _, row in self.customer_data.iterrows():
+                number = str(row["Mobile"])
+                name = str(row["Name"])
+                personalised = message_body.replace("NAME", name)
+                logger.info("Sending to %s (%s)", name, number)
+                sms_commands.send_sms(
+                    self.modem,
+                    number,
+                    personalised,
+                    reinitialize_fn=self._reinitialize_modem,
+                )
+                pbar.update(1)
+
+        messagebox.showinfo("Done", "All messages have been sent!")
+
+    # ------------------------------------------------------------------ #
+    #  Run
+    # ------------------------------------------------------------------ #
+
+    def run(self):
+        """Start the Tkinter main loop."""
+        self.window.mainloop()
 
 
 def main():
-    serialPortsList = detectSerialPorts()
-    initializeModem()
-    constructGui()
+    """Entry-point for the application."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s  %(levelname)-8s  %(name)s  %(message)s",
+    )
+    app = Application()
+    app.run()
 
 
-def detectSerialPorts():
-    serialPortsList = (list(serial.tools.list_ports.comports()))
-    if(len(serialPortsList) >= 1):
-        print("Serial Port detected. Confirm if Modem")
-        print(serialPortsList)
-        return serialPortsList
-    else:
-        print("\nNo Modem detected! Program exiting!\n")
-        messagebox.showerror(
-            "No Modem!", "No Modem detected! Program exiting. Check if modem is connected and showing in device manager!")
-        exit()
-
-
-def createLabel():
-    lbl = tk.Label(window, text="Built by @Talal916",
-                   font=("Arial Bold", 14))
-    lbl.grid(column=0, row=0)
-
-
-def fileButtonClicked():
-    print("Adding Customers")
-    customerFileLocation = askopenfilename()
-    print(customerFileLocation)
-    global customerFileData
-    customerFileData = 0
-    customerFileData = pd.read_excel(
-        customerFileLocation, "Sheet1", usecols=["Name", "Mobile"])
-    print(customerFileData)
-
-
-def initializeModem():
-    print('Initializing modem...')
-    global modem
-    modem = GsmModem(config.PORT, config.BAUDRATE,
-                     smsReceivedCallbackFunc=smsCommands.handleSms)
-    # logging.basicConfig(format='%(levelname)s: %(message)s',
-    #                     level=logging.DEBUG)
-    modem.connect(config.PIN)
-    print("Modem IMEI: ", modem.imei)
-    testMessageRequest()
-
-
-def testMessageRequest():
-    if(messagebox.askyesno("Send test message?", "Would you like to send a test sms message?")):
-        try:
-            smsCommands.testSms(modem)
-        except:
-            print("Failed to send test message. Check modem")
-
-
-def constructGui():
-    print("Constructing GUI")
-    createLabel()
-    createButtons()
-    createMessageField()
-    window.mainloop()
-
-
-def createMessageField():
-    global message
-    message = tk.Text(window, width=75, height=30)
-    message.grid(column=1, row=10)
-
-
-def createButtons():
-    customerFileBtn = tk.Button(
-        window, text="Select customer file", command=fileButtonClicked)
-    customerFileBtn.grid(column=0, row=5)
-    sendMessageBtn = tk.Button(
-        window, text="Send Message", command=sendMessageButtonClicked)
-    sendMessageBtn.grid(column=0, row=6)
-#     cancelBtn = tk.Button(window, text="Cancel Send",
-#                           command=cancelButtonClicked)
-
-
-# def cancelButtonClicked():
-
-
-def sendMessageButtonClicked():
-    if (askConfirmation()):
-        print("Calling message sender function")
-        callMessageSender(message.get('1.0', END))
-    else:
-        print("Message not sent, user declined")
-
-
-def callMessageSender(messageText):
-    with tqdm(total=len(list(customerFileData.iterrows()))) as pbar:
-        for index, row in customerFileData.iterrows():
-            convertedNumber = "+92"+str(row['Mobile'])
-            personalizedMessage = messageText.replace("NAME", row['Name'])
-            print("Sending message: \n"+personalizedMessage +
-                  "\n to: "+convertedNumber)
-            smsCommands.sendSms(modem, convertedNumber, personalizedMessage)
-            pbar.update(1)
-
-
-def reinitializeModem():
-    try:
-        print('Reinitializing modem...')
-        global modem
-        modem = GsmModem(config.PORT, config.BAUDRATE,
-                         smsReceivedCallbackFunc=smsCommands.handleSms)
-        modem.connect(config.PIN)
-        print("Modem IMEI: ", modem.imei)
-    except:
-        print("Failed to reinitialize modem")
-
-
-def askConfirmation():
-    res = messagebox.askyesnocancel(
-        "Are you sure?", "Are you sure want to send this message to all your customers?")
-    return res
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

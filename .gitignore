@@ -1,4 +1,29 @@
-.vscode/settings.json
-testingNumbers.py
-*.pyc
+# IDE
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+*.spec
+
+# Environment
+.env
+venv/
+.venv/
+
+# Data files
 *.xlsx
+*.csv
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+testingNumbers.py
+.pytest_cache/
